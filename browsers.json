@@ -1,0 +1,16 @@
+{
+    "browser": [
+      {
+        "name": "chrome",
+        "headless": true
+      },
+      {
+        "name": "firefox",
+        "headless": true
+      },
+      {
+        "name": "safari",
+        "headless": true
+      }
+    ]
+  }
