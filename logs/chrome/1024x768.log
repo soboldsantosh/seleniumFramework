@@ -1,0 +1,17 @@
+Navigating to https://konnect-net.sobold.dev/ in chrome with window size {"width":1024,"height":768}
+
+Locating Text Block Test using xpath: //section[@class='heading back-white-1 grey-1 heading--margin ']
+Performing assertion Visibility on Text Block Test
+Assertion passed: {"width":1024,"height":768}, Text Block Test, Visibility
+
+Locating Text Block Test Font size using xpath: //h2[contains(text(),'We help businesses that need to exchange data in a')]
+Performing assertion Element Visibility on Text Block Test Font size
+Assertion passed: {"width":1024,"height":768}, Text Block Test Font size, Element Visibility
+
+Performing assertion Element Class chcek on Text Block Test Font size
+Assertion passed: {"width":1024,"height":768}, Text Block Test Font size, Element Class chcek
+
+Performing assertion Element Font Size check on Text Block Test Font size
+Assertion failed: {"width":1024,"height":768}, Text Block Test Font size, Element Font Size check
+ was expected 25px but found 80px
+
