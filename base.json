@@ -1,0 +1,42 @@
+{
+    "desktop": [
+        {
+            "h1": {
+                "font-size": "60px",
+                "font-family": "meno-display, sans-serif",
+                "line-height": "40px",
+                "letter-spacing": "normal",
+                "font-weight": "200",
+                "color": "rgba(47, 32, 33, 1)"
+            },
+            "h2": {
+                "font-size": "48px",
+                "font-family": "meno-display, sans-serif",
+                "line-height": "40px",
+                "letter-spacing": "normal",
+                "font-weight": "200",
+                "color": "rgba(47, 32, 33, 1)"
+            }
+        }
+    ],
+    "tablet": [
+        {
+            "h1": {
+                "font-size": "45px",
+                "font-family": "'meno-display', sans-serif",
+                "line-height": "1.25",
+                "letter-spacing": "0",
+                "font-weight": "200",
+                "color": "#2F2021"
+            },
+            "h2": {
+                "font-size": "36px",
+                "font-family": "'meno-display', sans-serif",
+                "line-height": "1.25",
+                "letter-spacing": "0",
+                "font-weight": "200",
+                "color": "#2F2021"
+            }
+        }
+    ]
+}

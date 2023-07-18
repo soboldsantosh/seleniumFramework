@@ -1,0 +1,66 @@
+{
+    "url": "https://alcuin.sobold.dev/",
+    "screensizes": ["desktop"],
+    "test_cases": [
+        {
+            "test_name": "Text Block",
+            "type": "xpath",
+            "value": "//section[@class='text-image-and-stats']",
+            "assertions": [
+                {
+                    "name": "Text Block Visibility",
+                    "type": "isVisible",
+                    "expected_value": true
+                }
+            ],
+            "locators": [
+                {
+                    "locator_name": "Text block heading",
+                    "type": "xpath",
+                    "value": "//h2[@class='text-image-and-stats__intro h4 side-line reveal active seen']",
+                    "assertions": [
+                        {
+                            "name": "Visibility",
+                            "type": "isVisible",
+                            "expected_value": true
+                        },
+                        {
+                            "name": "Class Name",
+                            "type": "checkClassName",
+                            "expected_value": "text-image-and-stats__intro h4 side-line reveal active seen"
+                        },
+                        {
+                            "name": "Font Size",
+                            "type": "checkCSSProperty",
+                            "property": "font-size",
+                            "expected_value": "30px"
+                        },
+                        {
+                            "name": "Padding-bottom",
+                            "type": "checkCSSProperty",
+                            "property": "padding-bottom",
+                            "expected_value": "24px"
+                        },
+                        {
+                            "name": "Base font style",
+                            "type": "checkBase",
+                            "expected_value": "h2"
+                        }
+                    ]
+                },
+                {
+                    "locator_name": "Text block content",
+                    "type": "xpath",
+                    "value": "//p[contains(text(),'We provide partnership capital and will make both ')]",
+                    "assertions": [
+                        {
+                            "name": "Visibility",
+                            "type": "isVisible",
+                            "expected_value": true
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

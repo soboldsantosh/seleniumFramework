@@ -1,175 +1,232 @@
+// Import required dependencies
 const { Builder, By } = require('selenium-webdriver');
 const fs = require('fs');
 const { promisify } = require('util');
+const takeScreenshot = require('./screenshot');
+const { browser: browserList } = require('./browsers.json');
+const screenSizes = require('./screensize.json');
+const websiteData = require('./testdata1.json');
+const baseData = require('./base.json');
 
-const BROWSER_LIST_FILE = 'browsers.json';
-const SCREEN_SIZES_FILE = 'screensize.json';
-const WEBSITE_DATA_FILE = 'testdata.json';
+// Define the log directory path
 const LOG_DIR = 'logs';
 
-// Import necessary modules and define constant variables
-
+// Main function to run the tests
 async function runTests() {
-    // Asynchronous function to run tests
-
-    const browserList = require(`./${BROWSER_LIST_FILE}`).browser;
-    const screenSizes = require(`./${SCREEN_SIZES_FILE}`);
-    const websiteData = require(`./${WEBSITE_DATA_FILE}`);
-
-    // Load browser list, screen sizes, and website data from corresponding JSON files
-
+  try {
+    // Create the log directory if it doesn't exist
     if (!fs.existsSync(LOG_DIR)) {
-        fs.mkdirSync(LOG_DIR);
+      fs.mkdirSync(LOG_DIR);
     }
 
-    // Create a logs directory if it doesn't exist
-
+    // Iterate over each browser
     for (const browser of browserList) {
-        const browserLogDir = `${LOG_DIR}/${browser.name}`;
-        if (!fs.existsSync(browserLogDir)) {
-            fs.mkdirSync(browserLogDir);
-        }
+      const browserLogDir = `${LOG_DIR}/${browser.name}`;
 
-        // Create a directory for the specific browser in the logs directory if it doesn't exist
+      // Create browser-specific log directory if it doesn't exist
+      if (!fs.existsSync(browserLogDir)) {
+        fs.mkdirSync(browserLogDir);
+      }
 
-        for (const screenSize of screenSizes[websiteData.screensizes]) {
-            const logFilePath = `${browserLogDir}/${screenSize.width}x${screenSize.height}.log`;
-            const logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
+      // Iterate over each screen size for the website
+      for (const screenSize of screenSizes[websiteData.screensizes]) {
+        const logFilePath = `${browserLogDir}/${screenSize.width}x${screenSize.height}.log`;
+        const logStream = fs.createWriteStream(logFilePath, {
+          flags: 'a',
+        });
 
-            // Create a log file for each screen size in the browser directory and open a write stream
+        try {
+          // Log browser and screen size
+          log(logFilePath, `Running tests for browser: ${browser.name}`);
+          log(logFilePath, `Screen size: ${screenSize.width}x${screenSize.height}`);
 
-            try {
-                const driver = await new Builder()
-                    .forBrowser(browser.name)
-                    .build();
+          // Build the Selenium WebDriver instance for the current browser
+          const driver = await new Builder().forBrowser(browser.name).build();
+          await driver.manage().window().setRect(screenSize);
+          await driver.get(websiteData.url);
+          log(logFilePath, `Opened URL: ${websiteData.url}`);
 
-                // Create a Selenium WebDriver instance for the specified browser
+          const cookiePopupLocator = By.id('CybotCookiebotDialog');
+          const cookiePopupAccept = By.id('CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
 
-                const screenshotDir = `./screenshots/${browser.name}/${websiteData.screensizes}`;
-                fs.mkdirSync(screenshotDir, { recursive: true });
+          // Check if the cookie popup is visible and accept it if necessary
+          const isCookiePopupVisible = await isElementVisible(driver, cookiePopupLocator);
+          if (isCookiePopupVisible) {
+            await driver.findElement(cookiePopupAccept).click();
+            log(logFilePath, 'Accepted cookie popup');
+          }
 
-                // Create a screenshot directory for the specific browser and screen size if it doesn't exist
+          // Iterate over each test case for the website
+          for (const testCase of websiteData.test_cases) {
+            const element = await driver.findElement(By[testCase.type](testCase.value));
+            await driver.executeScript(
+              'arguments[0].scrollIntoView({ block: "start", inline: "nearest" });',
+              element
+            );
+            await driver.sleep(1000);
+            await takeScreenshot(
+              browser,
+              websiteData,
+              driver,
+              logFilePath,
+              screenSize,
+              testCase,
+              element
+            );
+            log(logFilePath, `Took screenshot for test case: ${testCase.test_name}`);
 
-                await driver.manage().window().setRect(screenSize);
-                log(
-                    logFilePath,
-                    `Navigating to ${websiteData.url} in ${
-                        browser.name
-                    } with window size ${JSON.stringify(screenSize)}\n`
-                );
-                await driver.get(websiteData.url);
-
-                // Set the window size, navigate to the website, and log the details
-
-                for (const locator of websiteData.locators) {
-                    log(
-                        logFilePath,
-                        `Locating ${locator.testName} using ${locator.type}: ${locator.value}`
-                    );
-                    const element = await driver.findElement(
-                        By[locator.type](locator.value)
-                    );
-
-                    // Find the web element using the specified locator strategy and value
-
-                    const screenshotDir = `./screenshots/${browser.name}/${websiteData.screensizes}`;
-                    fs.mkdirSync(screenshotDir, { recursive: true });
-                    const elementHash = `${screenSize.width}x${screenSize.height}-${locator.testName}`;
-                    const screenshotFile = `${screenshotDir}/${elementHash}.png`;
-
-                    // Create a screenshot file path and name based on the screen size and locator details
-
-                    if (!fs.existsSync(screenshotFile)) {
-                        log(
-                            logFilePath,
-                            `Taking screenshot of ${locator.testName}`
-                        );
-                        await driver.executeScript(
-                            'arguments[0].scrollIntoView(true)',
-                            element
-                        );
-                        const data = await driver.takeScreenshot();
-                        fs.writeFileSync(screenshotFile, data, 'base64');
-                    }
-
-                    // Take a screenshot of the element if the screenshot file doesn't exist
-
-                    for (const assertion of locator.assertions) {
-                        log(
-                            logFilePath,
-                            `Performing assertion ${assertion.name} on ${locator.testName}`
-                        );
-                        let result;
-
-                        switch (assertion.type) {
-                            case 'isVisible':
-                                result = await element.isDisplayed();
-                                break;
-                            case 'value':
-                                result = await element.getAttribute(
-                                    assertion.value
-                                );
-                                break;
-                            case 'cssValue':
-                                result = await element.getCssValue(
-                                    assertion.value
-                                );
-                                break;
-                            // Add other assertion types here
-                        }
-
-                        // Perform different types of assertions on the element and record the result
-
-                        if (assertion.type == 'value') {
-                            let a = await element.getAttribute(assertion.value);
-                            console.log(a);
-                            console.log(assertion.expectedValue);
-                        }
-
-                        // Log the actual and expected values for the "value" assertion type (for debugging purposes)
-
-                        if (result !== assertion.expectedValue) {
-                            const errorMsg = `Assertion failed: ${JSON.stringify(
-                                screenSize
-                            )}, ${locator.testName}, ${
-                                assertion.name
-                            }\n was expected ${
-                                assertion.expectedValue
-                            } but found ${result}\n`;
-                            log(logFilePath, errorMsg);
-                        } else {
-                            log(
-                                logFilePath,
-                                `Assertion passed: ${JSON.stringify(
-                                    screenSize
-                                )}, ${locator.testName}, ${assertion.name}\n`
-                            );
-                        }
-
-                        // Log the assertion result based on whether it passed or failed
-                    }
-                }
-
-                await driver.quit();
-            } catch (err) {
-                const errorMsg = `ERROR: ${JSON.stringify(
-                    screenSize
-                )}, ${err}\n`;
-                log(logFilePath, errorMsg);
-                await driver.quit();
+            // Iterate over each assertion for the current test case
+            for (const assertion of testCase.assertions) {
+              await performAssertion(
+                assertion.type,
+                element,
+                assertion.expected_value,
+                testCase.test_name,
+                logFilePath,
+                screenSize,
+                testCase.test_name,
+                assertion.name
+              );
+              log(logFilePath, `Performed assertion: ${assertion.name}`);
             }
 
-            // Handle any errors that occur during test execution and log the details
+            // Iterate over each locator within the current test case
+            for (const locator of testCase.locators) {
+              const locatorElement = await locateElement(
+                driver,
+                locator.type,
+                locator.value,
+                locator.locator_name,
+                logFilePath
+              );
+
+              // Iterate over each assertion for the current locator
+              for (const assertion of locator.assertions) {
+                await performAssertion(
+                  assertion.type,
+                  locatorElement,
+                  assertion.expected_value,
+                  locator.locator_name,
+                  logFilePath,
+                  assertion.property,
+                  screenSize,
+                  assertion.name
+                );
+                log(logFilePath, `Performed assertion: ${assertion.name}`);
+              }
+            }
+          }
+
+          // Quit the browser instance after the test case execution
+          await driver.quit();
+          log(logFilePath, 'Browser instance closed');
+        } catch (err) {
+          // Log any errors that occur during test execution
+          log(logFilePath, `ERROR: ${JSON.stringify(screenSize)}, ${err}\n`);
         }
+      }
     }
+  } catch (err) {
+    console.error('An error occurred:', err);
+  }
 }
 
+// Function to log a message to console and file
 function log(logFilePath, message) {
-    console.log(message);
-    fs.appendFileSync(logFilePath, `${message}\n`);
+  console.log(message);
+  fs.appendFileSync(logFilePath, `${message}\n`);
 }
 
-// Utility function to log messages to the console and append them to a log file
+// Function to check if an element is visible on the page
+async function isElementVisible(driver, locator) {
+  try {
+    const element = await driver.findElement(locator);
+    return await element.isDisplayed();
+  } catch (error) {
+    return false;
+  }
+}
 
+// // Function to take a screenshot (implementation not provided)
+// async function takeScreenshot(browser, websiteData, driver, logFilePath, screenSize, testCase, element) {
+//   // Implement the logic for taking a screenshot
+// }
+
+// Function to locate an element on the page
+async function locateElement(driver, type, value, locatorName, logFilePath) {
+  let locatorElement;
+
+  try {
+    locatorElement = await driver.findElement(By[type](value));
+  } catch (error) {
+    // Add a random sleep time before retrying to locate the element
+    await driver.sleep(Math.floor(Math.random() * 1000) + 3000);
+    locatorElement = await driver.findElement(By[type](value));
+  }
+
+  return locatorElement;
+}
+
+// Function to perform an assertion on an element
+async function performAssertion(type, element, expectedValue, testName, logFilePath, property, screenSize, locatorName) {
+  let result, errMsg;
+
+  switch (type) {
+    case 'isVisible':
+      result = await element.isDisplayed();
+      errMsg = ` but found ${result}\n`;
+      break;
+    case 'checkClassName':
+      const className = await element.getAttribute('class');
+      result = className.includes(expectedValue);
+      errMsg = ` but found className: ${className}\n`;
+      break;
+    case 'checkCSSProperty':
+      const cssProperty = await element.getCssValue(property);
+      result = cssProperty === expectedValue;
+      errMsg = ` but found ${property}: ${cssProperty}\n`;
+      break;
+    case 'checkBase':
+      const baseClass = expectedValue;
+      const baseRecords = baseData[websiteData.screensizes];
+      const baseValues = baseRecords[0][baseClass];
+      for (const key in baseValues) {
+        const value = baseValues[key];
+        const baseCssProperty = await element.getCssValue(key);
+        const res = baseCssProperty === baseValues[key];
+        errMsg = ` but found ${key}: ${baseCssProperty}\n`;
+
+        if (res) {
+          console.log(`Assertion passed: ${key}`);
+          log(
+            logFilePath,
+            `Assertion passed: ${JSON.stringify(screenSize)},${testName},  ${locatorName}, ${type}\n ${key} is as expected ${baseValues[key]} `
+          );
+        } else {
+          console.log(`Assertion failed: ${key}`);
+          log(
+            logFilePath,
+            `Assertion failed: ${JSON.stringify(screenSize)},${testName},  ${locatorName}, ${type}\n was expected ${baseValues[key]} ${errMsg}`
+          );
+        }
+      }
+      break;
+  }
+
+  // Log the assertion result
+  if (result !== true && type !== 'checkBase') {
+    log(
+      logFilePath,
+      `Assertion failed: ${JSON.stringify(screenSize)}, ${testName}, ${locatorName}, ${type}\n was expected ${expectedValue} ${errMsg}`
+    );
+  }
+  if (result === true && type !== 'checkBase') {
+    log(
+      logFilePath,
+      `Assertion passed: ${JSON.stringify(screenSize)}, ${testName}, ${locatorName}, ${type}\n`
+    );
+  }
+}
+
+// Run the tests
 runTests();
-// Execute the test suite
