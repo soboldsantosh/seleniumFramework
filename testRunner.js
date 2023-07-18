@@ -1,30 +1,35 @@
-const { Builder, By } = require('selenium-webdriver');
-const fs = require('fs');
-const { promisify } = require('util');
-const takeScreenshot = require('./screenshot');
-const { browser: browserList } = require('./browsers.json');
-const screenSizes = require('./screensize.json');
-const websiteData = require('./testdata1.json');
-const baseData = require('./base.json');
-const { isElementVisible, locateElement, performAssertion } = require('./helpers');
+// Import required dependencies
+const { Builder, By } = require('selenium-webdriver'); // Import the necessary dependencies from 'selenium-webdriver'
+const fs = require('fs'); // Import the file system module
+const { promisify } = require('util'); // Import the 'promisify' function from the 'util' module
+const takeScreenshot = require('./screenshot'); // Import the takeScreenshot function from 'screenshot.js'
+const { browser: browserList } = require('./browsers.json'); // Import the browserList from 'browsers.json'
+const screenSizes = require('./screensize.json'); // Import the screenSizes from 'screensize.json'
+const websiteData = require('./testdata1.json'); // Import the websiteData from 'testdata1.json'
+const baseData = require('./base.json'); // Import the baseData from 'base.json'
+const { isElementVisible, locateElement, performAssertion } = require('./helpers'); // Import helper functions from 'helpers.js'
 
-
-
+// Define the log directory path
 const LOG_DIR = 'logs';
 
- async function runTests() {
+// Main function to run the tests
+async function runTests() {
   try {
+    // Create the log directory if it doesn't exist
     if (!fs.existsSync(LOG_DIR)) {
       fs.mkdirSync(LOG_DIR);
     }
 
+    // Iterate over each browser
     for (const browser of browserList) {
       const browserLogDir = `${LOG_DIR}/${browser.name}`;
 
+      // Create browser-specific log directory if it doesn't exist
       if (!fs.existsSync(browserLogDir)) {
         fs.mkdirSync(browserLogDir);
       }
 
+      // Iterate over each screen size for the website
       for (const screenSize of screenSizes[websiteData.screensizes]) {
         const logFilePath = `${browserLogDir}/${screenSize.width}x${screenSize.height}.log`;
         const logStream = fs.createWriteStream(logFilePath, {
@@ -32,9 +37,11 @@ const LOG_DIR = 'logs';
         });
 
         try {
+          // Log browser and screen size
           log(logFilePath, `Running tests for browser: ${browser.name}`);
           log(logFilePath, `Screen size: ${screenSize.width}x${screenSize.height}`);
 
+          // Build the Selenium WebDriver instance for the current browser
           const driver = await new Builder().forBrowser(browser.name).build();
           await driver.manage().window().setRect(screenSize);
           await driver.get(websiteData.url);
@@ -43,12 +50,14 @@ const LOG_DIR = 'logs';
           const cookiePopupLocator = By.id('CybotCookiebotDialog');
           const cookiePopupAccept = By.id('CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
 
+          // Check if the cookie popup is visible and accept it if necessary
           const isCookiePopupVisible = await isElementVisible(driver, cookiePopupLocator);
           if (isCookiePopupVisible) {
             await driver.findElement(cookiePopupAccept).click();
             log(logFilePath, 'Accepted cookie popup');
           }
 
+          // Iterate over each test case for the website
           for (const testCase of websiteData.test_cases) {
             const element = await driver.findElement(By[testCase.type](testCase.value));
             await driver.executeScript(
@@ -67,6 +76,7 @@ const LOG_DIR = 'logs';
             );
             log(logFilePath, `Took screenshot for test case: ${testCase.test_name}`);
 
+            // Iterate over each assertion for the current test case
             for (const assertion of testCase.assertions) {
               await performAssertion(
                 assertion.type,
@@ -81,6 +91,7 @@ const LOG_DIR = 'logs';
               log(logFilePath, `Performed assertion: ${assertion.name}`);
             }
 
+            // Iterate over each locator within the current test case
             for (const locator of testCase.locators) {
               const locatorElement = await locateElement(
                 driver,
@@ -90,6 +101,7 @@ const LOG_DIR = 'logs';
                 logFilePath
               );
 
+              // Iterate over each assertion for the current locator
               for (const assertion of locator.assertions) {
                 await performAssertion(
                   assertion.type,
@@ -106,9 +118,11 @@ const LOG_DIR = 'logs';
             }
           }
 
+          // Quit the browser instance after the test case execution
           await driver.quit();
           log(logFilePath, 'Browser instance closed');
         } catch (err) {
+          // Log any errors that occur during test execution
           log(logFilePath, `ERROR: ${JSON.stringify(screenSize)}, ${err}\n`);
         }
       }
@@ -118,9 +132,11 @@ const LOG_DIR = 'logs';
   }
 }
 
+// Function to log a message to console and file
 function log(logFilePath, message) {
   console.log(message);
   fs.appendFileSync(logFilePath, `${message}\n`);
 }
 
+// Export the runTests function as the entry point for running the tests
 module.exports = runTests;
