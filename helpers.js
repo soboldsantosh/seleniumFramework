@@ -29,7 +29,7 @@ async function locateElement(driver, type, value, locatorName, logFilePath) {
 }
 
 // Function to perform an assertion on an element
-async function performAssertion(type, element, expectedValue, testName, logFilePath, property, screenSize, locatorName) {
+async function performAssertion(type, element, expectedValue, testName, logFilePath, property, screenSize, locatorName, screenSizeGroup) {
   let result, errMsg;
 
   switch (type) {
@@ -49,7 +49,7 @@ async function performAssertion(type, element, expectedValue, testName, logFileP
       break;
     case 'checkBase':
       const baseClass = expectedValue;
-      const baseRecords = baseData[websiteData.screensizes];
+      const baseRecords = baseData[screenSizeGroup];
       const baseValues = baseRecords[0][baseClass];
       for (const key in baseValues) {
         const value = baseValues[key];
