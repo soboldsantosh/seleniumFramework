@@ -21,7 +21,7 @@ To run the tests, follow these steps:
 1. Install the required dependencies:
 
    ```shell
-   npm install selenium-webdriver
+   npm install 
    ```
 
 2. Configure the test data:
@@ -35,7 +35,10 @@ To run the tests, follow these steps:
    ```shell
    node runTests.js
    ```
-
+Or 
+   ```shell
+   npm run test
+   ```
 ## File Structure
 
 - `runTests.js`: The main test script that runs the automated tests.
