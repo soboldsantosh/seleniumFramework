@@ -50,8 +50,8 @@ async function runTests() {
                       await driver.get(websiteData.url);
                       log(logFilePath, `Opened URL: ${websiteData.url}`);
 
-                      const cookiePopupLocator = By.id('CybotCookiebotDialog');
-                      const cookiePopupAccept = By.id('CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll');
+                      const cookiePopupLocator = By.id('CybotCookiebotDialogBody');
+                      const cookiePopupAccept = By.id('CybotCookiebotDialogBodyButtonAccept');
 
                       // Check if the cookie popup is visible and accept it if necessary
                       const isCookiePopupVisible = await isElementVisible(driver, cookiePopupLocator);
